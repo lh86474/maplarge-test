@@ -173,7 +173,8 @@ async function uploadFile() {
 
     if (response.ok) {
         fileInput.value = '';
-        handleHash();
+        // fetch updated list of files
+        await handleHash();
     } else {
         alert('Upload failed');
     }
