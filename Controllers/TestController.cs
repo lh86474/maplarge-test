@@ -15,9 +15,16 @@ namespace TestProject.Controllers {
     public class TestController : ControllerBase {
         
         private readonly ILogger<TestController> _logger;
+        private readonly string _rootPath;
 
-        public TestController(ILogger<TestController> logger) {
+        public TestController(ILogger<TestController> logger, IConfiguration config) {
             _logger = logger;
+
+            var configuredDirectory = config["Storage:RootDirectory"];
+
+            _rootPath = !string.IsNullOrWhiteSpace(configuredDirectory) && Directory.Exists(configuredDirectory) 
+                ? configuredDirectory
+                : Directory.GetCurrentDirectory();
         }
 
         [HttpGet("browse")]
@@ -28,10 +35,8 @@ namespace TestProject.Controllers {
          * @param path: the path to the directory to browse
          */
         public IActionResult Get([FromQuery] string? path ="") {
-            // get the path of our current directory
-            var rootPath = Directory.GetCurrentDirectory();
             // Combine the paths
-            var targetPath = Path.Combine(rootPath, path ?? "");
+            var targetPath = Path.Combine(_rootPath, path ?? "");
 
             // Check if the folder exists
             if (!Directory.Exists(targetPath)) {
@@ -91,8 +96,7 @@ namespace TestProject.Controllers {
                 return BadRequest(new { error = "Search query is required" });
             }
 
-            var rootPath = Directory.GetCurrentDirectory();
-            var targetPath = Path.Combine(rootPath, path ?? "");
+            var targetPath = Path.Combine(_rootPath, path ?? "");
 
             if (!Directory.Exists(targetPath)) {
                 return NotFound(new { error = "Directory not found" });
@@ -124,7 +128,7 @@ namespace TestProject.Controllers {
 
                 var fileItem = new FileItem {
                     Name = item.Name,
-                    RelativePath = Path.GetRelativePath(rootPath, item.FullName),
+                    RelativePath = Path.GetRelativePath(_rootPath, item.FullName),
                     IsDirectory = isDir,
                     Size = size,
                     LastModified = item.LastWriteTime
@@ -136,5 +140,53 @@ namespace TestProject.Controllers {
             return Ok(results);
         }
 
+        [HttpGet("download")]
+
+        /*
+         * Downloads a file
+         * @return IActionResult, the result of the download request.
+         * @param path: the path to the file to download
+         */
+        public IActionResult Download([FromQuery] string path) {
+            var targetPath = Path.Combine(_rootPath, path ?? "");
+
+            // check if the file exists
+            if (!System.IO.File.Exists(targetPath)) {
+                return NotFound(new { error = "download target file not found"});
+            }
+
+            // send file
+            return PhysicalFile(targetPath, "application/octet-stream",
+            Path.GetFileName(targetPath));
+        }
+
+        [HttpPost("upload")]
+
+        /*
+         * Uploads a file
+         * @return IActionResult, the result of the upload request.
+         * @param path: the path to the file to upload
+         */
+        public async Task<IActionResult> Upload(IFormFile file, [FromQuery] string? path ="") {
+            if (file == null || file.Length == 0) {
+                return BadRequest(new { error ="No file selected"});
+            }
+
+            var targetDir = Path.Combine(_rootPath, path ?? "");
+
+            if (!Directory.Exists(targetDir)) {
+                Directory.CreateDirectory(targetDir);
+            }
+
+            var destinationPath = Path.Combine(targetDir, file.FileName);
+
+            // write the file to disk
+
+            using (var stream = new FileStream(destinationPath, FileMode.Create)) {
+                await file.CopyToAsync(stream);
+            }
+
+            return Ok(new { message = "File uploaded successfully" });
+        }
     }
 }

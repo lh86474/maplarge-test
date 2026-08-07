@@ -7,15 +7,30 @@
 </head>
 
 <body>
+
   <h1> Files Browser </h1>
+
   <!-- Display the current directory path or search status -->
+
   <h3 id="pathHeader"></h3>
+
+  <!-- total size -->
+
+  <p id="summaryStats"></p>
+
   <!-- Input for query -->
+
   <input type="text" id="searchInput" placeholder="Enter query">
 
   <!-- buttons to reset and to search -->
   <button onclick="performSearch()">Search</button>
   <button onclick="loadFolder('')">Return to root folder </button>
+
+  <!-- File Upload -->
+  <div style="margin: 15px 0;">
+    <input type="file" id="fileUploadInput">
+    <button onclick="uploadFile()">Upload File </button>
+  </div>
 
   <!-- table to display query results -->
   <table>
@@ -25,8 +40,10 @@
         <th scope="col">Name</th>
         <th scope="col">Size</th>
         <th scope="col">Last Modified</th>
+        <th scope="col">Action</th>
       </tr>
     </thead>
+
     <!-- append rows here -->
     <tbody id="fileTableBody"></tbody>
   </table>
